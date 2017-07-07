@@ -1,0 +1,183 @@
+<!DOCTYPE>
+<html>
+<head>
+<style>
+	html,body,ul,li,p,div{
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+	}
+	ul,li{
+		list-style: none;
+	}
+
+    .wrap{
+  	    width: 900px;
+		margin: 0 auto;
+    }
+
+	.clearfix:after{
+		content: '';
+		display: block;
+		clear: both;
+	}
+	.container{
+		position: relative;
+
+	}
+	.container .item{
+        position: absolute;
+		padding: 0 0 10px 0;
+		width: 280px;
+		margin: 10px;
+		border: 1px solid #DFDFDF;
+		background: #FFF;
+		opacity: 1;
+		transition: all .8s;
+	}
+	.container .item img{
+	    margin: 10px;
+	    width: 260px;
+	}
+	.container .item .header{
+		height: 25px;
+	    margin: 0 12px;
+	    border-bottom: 1px solid #DBDBDB;
+	}
+	.container .description{
+		font-size: 12px;
+		line-height: 1.8;
+	    margin: 10px 15px 0;
+	    color: #777371;
+	}
+	.load{
+		height: 20px;
+	}
+	.hide{
+		display: none;
+	}
+</style>
+</head>
+<body>
+	 <div class="wrap">
+    <div class="ct-waterfall">
+    	<ul class="container" class="clearfix">
+        
+				<!-- 用于计算 item 宽度和列数，但不展示出来-->
+          <li class = "item hide">用来测定宽度和高度</li>
+    	</ul>
+    	<div class="load"></div>
+    </div>
+	</div>
+</body>
+
+  <script src = 'https://cdn.bootcss.com/jquery/3.2.1/jquery.js'></script>
+  <script>
+
+var curPage = 1,
+    perPageCount = 10,
+    itemWidth = $('.item').outerWidth(true);
+var isDataArrive = true;
+var cols = parseInt( $('.container').width()/itemWidth );
+var $items = $('.item');
+var heightArr = [];
+for( var i = 0; i < cols; i++ ){
+    heightArr[i] = 0; //重置数组
+}
+function start(){
+    getData(function(newsList){
+        console.log(newsList);
+        isDataArrive = true;
+        $.each(newsList, function(index, news){
+            var $node = getNode(news); //将每条新闻数据转化成DOM节点
+            $node.find('img').on('load', function(){
+                
+                $('.container').append($node); //将DOM节点添加到html文档流中
+                console.log($node.outerHeight(true))
+                waterfall($node);
+            })
+        })
+    })
+    isDataArrive = false;
+}
+function getData(callback){ 
+    $.ajax({
+        url: 'http://platform.sina.com.cn/slide/album_tech',
+        type: 'get',
+        dataType : 'jsonp',
+        jsonp: 'jsoncallback',
+        data: {
+            app_key: '1271687855' ,
+            num : perPageCount,
+            page : curPage
+        }
+    }).done(function(ret){
+        if( ret && ret.status && ret.status.code === '0'){
+            callback(ret.data);
+            curPage++;
+        }else{
+            console.log('Cannot have access to the data');
+        }
+    })
+}
+
+function getNode(item){
+    var html = '';
+	html += '<li class="item">';
+	html += ' <a href="'+ item.url +'" class="link"><img src="' + item.img_url + '" alt=""></a>';
+	html += ' <h4 class="header">'+ item.short_name +'</h4>';
+	html += '<p class="description">'+item.short_intro+'</p>';
+	html += '</li>';
+    return $(html);
+}
+
+function waterfall($node){
+    console.log(cols);
+    var minHeight = Math.min.apply(null, heightArr);
+    var minHeightIndex = heightArr.indexOf(minHeight);
+    $node.css({
+        top: minHeight,
+        left: itemWidth * minHeightIndex
+    })
+    heightArr[minHeightIndex] += $node.outerHeight(true);
+    $('.container').height(Math.max.apply(null, heightArr));
+    console.log(heightArr)
+}
+
+function isVisible($el){
+	var scrollH = $(window).scrollTop(),
+	  	winH = $(window).height(),
+	  	top = $el.offset().top;
+        console.log(top);
+        console.log(winH);
+        console.log(scrollH);
+
+  	if(top < 830 + scrollH){
+        console.log('visible');
+  	    return true;
+  	}else{
+    	return false;
+  	}
+}
+
+function checkShow(){
+    if(isVisible($('.load'))){
+        start();
+    }
+}
+
+var clock
+start();
+$(window).on('scroll', function(){
+    if(!isDataArrive) return;
+    if(clock){
+        clearTimeout(clock);
+    }
+    clock = setTimeout(function(){
+        checkShow();
+    },200)
+})
+
+
+  </script>
+</html>
